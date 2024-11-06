@@ -8,12 +8,12 @@ rng(1);
 %% Parameters setting
 s_nConst = 2;       % Constellation size (2 = BPSK)
 s_nMemSize = 4;     % Number of taps
-s_fTrainSize = 5000; % Training size
-s_fTestSize = 50000; % Test data size
+s_fTrainSize = 500; % Training size
+s_fTestSize = 5000; % Test data size
 
 s_nStates = s_nConst^s_nMemSize;
 
-v_fSigWdB=   -6:2:10;  %Noise variance in dB
+v_fSigWdB=   -2:2:6;  %Noise variance in dB
 
 s_fEstErrVar = 0.1;   % Estimation error variance
 % Frame size for generating noisy training
@@ -22,8 +22,8 @@ s_fNumFrames = s_fTrainSize/s_fFrameSize;
 
 v_nCurves   = [...          % Curves
     1 ...                   % Deep Viterbi - perfect CSI
-    1 ....                  % Deep Viterbi - CSI uncertainty
-    1 ...                   % Viterbi algorithm
+    0 ....                  % Deep Viterbi - CSI uncertainty
+    0 ...                   % Viterbi algorithm
     ];
 
 
@@ -37,7 +37,7 @@ v_stProts = strvcat(  ...
 s_nMixtureSize = s_nStates;
 
 %% Simulation loop
-v_fExps =  0.1:0.1:2;
+v_fExps =  0.5:0.1:1;
 m_fSERAvg = zeros(length(v_nCurves),length(v_fSigWdB));
 
 for eIdx=1:length(v_fExps)
