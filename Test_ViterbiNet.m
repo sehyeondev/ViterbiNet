@@ -23,7 +23,7 @@ s_fNumFrames = s_fTrainSize/s_fFrameSize;
 v_nCurves   = [...          % Curves
     1 ...                   % Deep Viterbi - perfect CSI
     0 ....                  % Deep Viterbi - CSI uncertainty
-    0 ...                   % Viterbi algorithm
+    1 ...                   % Viterbi algorithm
     ];
 
 
@@ -37,7 +37,7 @@ v_stProts = strvcat(  ...
 s_nMixtureSize = s_nStates;
 
 %% Simulation loop
-v_fExps =  0.5:0.1:1;
+v_fExps =  0.5:0.1:0.5;
 m_fSERAvg = zeros(length(v_nCurves),length(v_fSigWdB));
 
 for eIdx=1:length(v_fExps)
