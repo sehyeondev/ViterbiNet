@@ -15,14 +15,13 @@ function llr = bcjrAlg(y,trellis,sigW)
     %% Compute gamma
     for k = 1:numData
         v_yk = y(k*memSize-memSize+1:k*memSize);
-        for s = 1:numStates
-            for ss = 1:numStates
+        for s = 1:numStates % previous state
+            for ss = 1:numStates % next state
                 [msg,in]=ismember(ss-1,trellis.nextStates(s,:));
                 if msg==1
                     v_xk = binary(trellis.outputs(s, in),memSize);
                     P_y_x = prod(normpdf(v_yk-a*v_xk,0,sigW));
                     gamma = P_uk * P_y_x; % equal prob
-                    % gamma = exp(Lc/2*dot(v_xk, v_yk));
                     m_gamma(k, ss, s) = gamma;
                 end
             end
@@ -32,19 +31,21 @@ function llr = bcjrAlg(y,trellis,sigW)
     %% compute alpha
     m_alpha(1,1) = 1; % start with state 0
     for k = 2:numData+1
-        for ss = 1:numStates
-            m_alpha(k,ss) = dot(m_alpha(k-1,:), reshape(m_gamma(k-1, ss,:),1,numStates));
+        for ss = 1:numStates % for each previous state
+            m_alpha(k,ss) = dot(m_alpha(k-1,:), ...
+                reshape(m_gamma(k-1, ss,:),1,numStates));
         end
-        m_alpha(k,:) = m_alpha(k,:) / sum(m_alpha(k,:));
+        m_alpha(k,:) = m_alpha(k,:) / sum(m_alpha(k,:)); % normalization
     end
     
     %% compute beta
-    m_beta(numData+1,1) = 1; % end with state 0
+    m_beta(numData+1,:) = (1/numStates).*ones(1,numStates);
     for k=numData+1:-1:2
-        for s = 1:numStates
-            m_beta(k-1,s) = dot(m_beta(k,:), reshape(m_gamma(k-1,:,s),1,numStates));
+        for s = 1:numStates % for each next state
+            m_beta(k-1,s) = dot(m_beta(k,:), ...
+                reshape(m_gamma(k-1,:,s),1,numStates));
         end
-        m_beta(k-1,:) = m_beta(k-1,:)/sum(m_beta(k-1,:));
+        m_beta(k-1,:) = m_beta(k-1,:)/sum(m_beta(k-1,:)); % normalization
     end
     
     %% compute llr
@@ -62,6 +63,7 @@ function llr = bcjrAlg(y,trellis,sigW)
                 end
             end
         end
+        % normalization
         numer = up/(up+down);
         denom = down/(up+down);
         llr(k) = log(numer/denom);

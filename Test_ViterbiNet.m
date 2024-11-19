@@ -7,7 +7,7 @@ rng(1);
 
 %% Parameters setting
 s_nConst = 2;       % Constellation size (2 = BPSK)
-s_nMemSize = 4;     % Number of taps
+s_nMemSize = 2;     % Number of taps
 s_fTrainSize = 500; % Training size
 s_fTestSize = 5000; % Test data size
 
@@ -22,8 +22,9 @@ s_fNumFrames = s_fTrainSize/s_fFrameSize;
 
 v_nCurves   = [...          % Curves
     1 ...                   % Deep Viterbi - perfect CSI
-    0 ....                  % Deep Viterbi - CSI uncertainty
-    1 ...                   % Viterbi algorithm
+    1 ....                  % Deep Viterbi - CSI uncertainty
+    1 ...                   % Viterbi algorithm - perfect CSI
+    1 ...                   % Viterbi algorithm - CSI uncertainty
     ];
 
 
@@ -32,7 +33,8 @@ s_nCurves = length(v_nCurves);
 v_stProts = strvcat(  ...
     'ViterbiNet, perfect CSI', ...
     'ViterbiNet, CSI uncertainty',...
-    'Viterbi algorithm');
+    'Viterbi algorithm, perfect CSI', ...
+    'Viterbi algorithm, CSI uncertainty');
 
 s_nMixtureSize = s_nStates;
 
@@ -56,10 +58,12 @@ for eIdx=1:length(v_fExps)
     v_Rtrain = fliplr(v_fChannel) * m_fStrain;
     % Training with noisy CSI
     v_Rtrain2 = zeros(size(v_Rtrain));
+    m_fNoisyChannel = zeros(s_fNumFrames,s_nMemSize);
     for kk=1:s_fNumFrames
         Idxs=((kk-1)*s_fFrameSize + 1):kk*s_fFrameSize;
-        v_Rtrain2(Idxs) =  fliplr(v_fChannel + sqrt(s_fEstErrVar)*randn(size(v_fChannel))*diag(v_fChannel)) ...
-            * m_fStrain(:,Idxs);
+        noisyChannel = v_fChannel + sqrt(s_fEstErrVar)*randn(size(v_fChannel))*diag(v_fChannel);
+        m_fNoisyChannel(kk,:) = noisyChannel;
+        v_Rtrain2(Idxs) =  fliplr(noisyChannel) * m_fStrain(:,Idxs);
     end
     
     
@@ -119,6 +123,37 @@ for eIdx=1:length(v_fExps)
             % Evaluate error rate
             m_fSER(3,mm) = mean(v_fXhat ~= v_fXtest);
         end
+
+        if(v_nCurves(4)==1)
+            m_fLikelihood = zeros(s_fTestSize, s_nStates);
+            
+            % Compute coditional PDF for each state
+            for ii=1:s_nStates
+                v_fX = zeros(s_nMemSize,1);
+                Idx = ii - 1;
+                for ll=1:s_nMemSize
+                    v_fX(ll) = mod(Idx,s_nConst) + 1;
+                    Idx = floor(Idx/s_nConst);
+                end
+                v_fS = 2*(v_fX - 0.5*(s_nConst+1));
+                % noisyChannel = v_fChannel + sqrt(s_fEstErrVar)*randn(size(v_fChannel))*diag(v_fChannel);
+                % m_fLikelihood(:,ii) = normpdf(v_fYtest' -  fliplr(noisyChannel)*v_fS,0,s_fSigmaW);
+                for kk=1:s_fNumFrames
+                    Idxs = ((kk-1)*s_fFrameSize+1):kk*s_fFrameSize;
+                    % noisyChannel = m_fNoisyChannel(kk,:);
+                    noisyChannel = v_fChannel + sqrt(s_fEstErrVar)*randn(size(v_fChannel))*diag(v_fChannel);
+                    m_fLikelihood(Idxs,ii) = normpdf(v_fYtest(1,Idxs)' -  fliplr(noisyChannel)*v_fS,0,s_fSigmaW);
+                end
+                
+            end
+
+            
+            
+            % Apply Viterbi detection based on computed likelihoods
+            v_fXhat = v_fViterbi(m_fLikelihood, s_nConst, s_nMemSize);
+            % Evaluate error rate
+            m_fSER(4,mm) = mean(v_fXhat ~= v_fXtest);
+        end
         
         % Display SNR index
         mm
@@ -132,7 +167,7 @@ m_fSERAvg = m_fSERAvg/length(v_fExps);
 
 
 %% Display results
-v_stPlotType = strvcat( '-rs', '--go', '-.b^');
+v_stPlotType = strvcat( '-rs', '--go', '-.b^', '--kv');
 
 v_stLegend = [];
 fig1 = figure;

@@ -12,12 +12,12 @@ dataBits = randi([0 1], 5000, 1);
 encodedData = convenc(dataBits, trellis);
 
 % Assume some noisy received data
-receivedData = encodedData + 10 * randn(size(encodedData));
+receivedData = encodedData + 1 * randn(size(encodedData));
 
 % Decode using the APP decoder
 % decodedBits = appDecoder(receivedData);
 
-tbdepth = 43;
-decodedData = vitdec(encodedData,trellis,tbdepth,'trunc','hard');
+tbdepth = 10;
+decodedData = vitdec(receivedData,trellis,tbdepth,'trunc','soft');
 
 err = biterr(dataBits,decodedData);
