@@ -38,7 +38,7 @@ errMyBCJR = comm.ErrorRate;
 
 %% System simulation
 ber = zeros(6,length(SNR));
-maxIter = 100;
+maxIter = 30;
 
 for ii=1:length(SNR)
     reset(errHard)
@@ -93,7 +93,7 @@ for ii=1:length(SNR)
         % berBCJR = errBCJR(txData,rxDataBCJR');
         
         % My BCJR
-        rxDataMyBCJR = double(bcjrAlg(hardData',trellis,sqrt(nVar)) > 0);
+        rxDataMyBCJR = double(bcjrAlg(-LLRData',trellis,sqrt(nVar)) > 0);
         berMyBCJR = errMyBCJR(txData,rxDataMyBCJR');
 
         %%% Store BER %%%
